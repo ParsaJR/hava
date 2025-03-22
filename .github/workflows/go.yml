@@ -52,4 +52,5 @@ jobs:
             hava-linux-amd64
             hava-darwin-amd64
             hava-windows-amd64.exe
-    
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
