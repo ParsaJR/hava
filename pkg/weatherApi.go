@@ -8,12 +8,22 @@ import (
 	"net/http"
 )
 
+// The Successfull Response
 type WeatherResponse struct {
 	Current Current `json:"current"`
 }
 
 type Current struct {
 	Temp_C float64 `json:"temp_c"`
+}
+
+// Error Response From WeatherApi
+type WeatherResponseError struct {
+	Error Werror `json:"error"`
+}
+
+type Werror struct {
+	Message string `json:"message"`
 }
 
 func ReturnTemperatureByCity(city string, apikey string) {
@@ -29,11 +39,13 @@ func call(city string, apikey string) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		log.Fatal("Status Code is wrong")
-	}
-
 	body, err := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		var weatherResponseError WeatherResponseError
+		err = json.Unmarshal(body, &weatherResponseError)
+		log.Fatal("Error: ", weatherResponseError.Error.Message)
+	}
 
 	var weatherResponse WeatherResponse
 

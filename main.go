@@ -1,5 +1,4 @@
 // Main Cli Entry
-
 package main
 
 import (
@@ -17,20 +16,18 @@ func main() {
 	flag.Parse()
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal(".env cant be loaded")
+		log.Fatal(".env cant be loaded. Is this file exist?")
 	}
-	if *help {
+	if *help || len(os.Args) <= 1 {
 		showHelp()
 		return
+	} else {
+		apikey := os.Getenv("KEY")
+		weatherapi.ReturnTemperatureByCity(os.Args[1], apikey)
+		fmt.Println("󰔄")
 	}
-
-	City := os.Args[1]
-
-	apikey := os.Getenv("KEY")
-	weatherapi.ReturnTemperatureByCity(City, apikey)
-	fmt.Println("󰔄")
 }
 func showHelp() {
-	fmt.Println("Usage: hava [option] [City]")
+	fmt.Println("Usage: hava [option] [city]")
 	flag.PrintDefaults()
 }
