@@ -8,6 +8,9 @@ on:
     branches:
       - '**'
 
+env:
+  KEY: ${{ secrets.WEATHERAPI_KEY }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
