@@ -31,6 +31,7 @@ func ReturnTemperatureByCity(city string, apikey string) {
 }
 
 func call(city string, apikey string) {
+	
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=no", apikey, city)
 
 	resp, err := http.Get(url)
