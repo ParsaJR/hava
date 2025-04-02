@@ -14,10 +14,10 @@ import (
 
 func TestApi(t *testing.T) {
 	err := godotenv.Load("../.env")
-	if err != nil {
-		log.Print("no .env file exist")
-	}
 	apikey := os.Getenv("KEY")
+	if err != nil && len(apikey) == 0 {
+		log.Fatal("API is not exist")
+	}
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=no", apikey, "Tehran")
 
 	resp, err := http.Get(url)
