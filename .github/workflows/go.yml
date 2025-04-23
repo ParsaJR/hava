@@ -31,7 +31,6 @@ jobs:
         run: |
           GOOS=linux GOARCH=amd64 go build -v -o hava-linux-amd64 .
           GOOS=darwin GOARCH=amd64 go build -v -o hava-darwin-amd64 .
-          GOOS=windows GOARCH=amd64 go build -v -o hava-windows-amd64.exe .
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -40,7 +39,6 @@ jobs:
           path: |
             hava-linux-amd64
             hava-darwin-amd64
-            hava-windows-amd64.exe
 
   release:
     needs: build
@@ -59,6 +57,5 @@ jobs:
           files: |
             hava-linux-amd64
             hava-darwin-amd64
-            hava-windows-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
