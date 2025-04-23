@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	weatherapi "github.com/ParsaJR/hava/pkg"
 	"github.com/joho/godotenv"
@@ -14,20 +15,40 @@ import (
 func main() {
 	help := flag.Bool("h", false, "Show help")
 	flag.Parse()
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(".env cant be loaded. Is this file exist?")
-	}
+	envCheck()
+	// Return help, if user wants it or didn't provide any argument after the commnad
 	if *help || len(os.Args) <= 1 {
 		showHelp()
 		return
 	} else {
 		apikey := os.Getenv("KEY")
-		weatherapi.ReturnTemperatureByCity(os.Args[1], apikey)
-		fmt.Println("󰔄")
+		temp := weatherapi.ReturnTempertureByCity(os.Args[1], apikey)
+		fmt.Printf("%0.1f°C \n", temp)
 	}
 }
+
 func showHelp() {
-	fmt.Println("Usage: hava [option] [city]")
+	fmt.Println("Usage: hava [city] [option]")
 	flag.PrintDefaults()
+}
+
+func envCheck() {
+	ex, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = godotenv.Load()
+	if err != nil {
+		for range 2 {
+			err = godotenv.Load(filepath.Join(ex, "/.env"))
+			if err != nil {
+				ex = filepath.Join(ex, "../")
+			} else {
+				break
+			}
+		}
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
 }

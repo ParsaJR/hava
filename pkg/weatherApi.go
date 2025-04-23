@@ -26,11 +26,12 @@ type Werror struct {
 	Message string `json:"message"`
 }
 
-func ReturnTemperatureByCity(city string, apikey string) {
-	call(city, apikey)
+func ReturnTempertureByCity(city string, apikey string) float64 {
+	temperture := call(city, apikey)
+	return temperture
 }
 
-func call(city string, apikey string) {
+func call(city string, apikey string) float64{
 	
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=no", apikey, city)
 
@@ -51,6 +52,5 @@ func call(city string, apikey string) {
 	var weatherResponse WeatherResponse
 
 	err = json.Unmarshal(body, &weatherResponse)
-	fmt.Print(weatherResponse.Current.Temp_C)
-
+	return weatherResponse.Current.Temp_C
 }
