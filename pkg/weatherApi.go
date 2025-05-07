@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+	"os"
+	"time"
 )
 
 // The Successfull Response
@@ -26,31 +27,72 @@ type Werror struct {
 	Message string `json:"message"`
 }
 
-func ReturnTempertureByCity(city string, apikey string) float64 {
-	temperture := call(city, apikey)
-	return temperture
+func ReturnTempertureByCity(city string, apikey string) (float64, error) {
+	cacheFile := "weather_cache"
+	var err error
+
+	if !isCacheValid(cacheFile) {
+		err = dump(city, apikey)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	file, err := os.ReadFile(cacheFile)
+	if err != nil {
+		return 0, err
+	}
+
+	var weather WeatherResponse
+	err = json.Unmarshal(file, &weather)
+
+	return weather.Current.Temp_C, nil
+
 }
 
-func call(city string, apikey string) float64{
-	
+func dump(city string, apikey string) error {
+
+	// this function will Fetch The response and write it into the disk...
+
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=no", apikey, city)
 
-	resp, err := http.Get(url)
+	response, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		var weatherResponseError WeatherResponseError
-		err = json.Unmarshal(body, &weatherResponseError)
-		log.Fatal("Error: ", weatherResponseError.Error.Message)
+	if response.StatusCode != http.StatusOK {
+		// trying to parse the error
+		var apierror WeatherResponseError
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read the response: %w", err)
+		}
+		if err = json.Unmarshal(body, &apierror); err != nil {
+			return fmt.Errorf("Failed to parse Api response: %w",err)
+		}
+		return fmt.Errorf("Api Error: %s", apierror.Error.Message)
 	}
 
-	var weatherResponse WeatherResponse
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
 
-	err = json.Unmarshal(body, &weatherResponse)
-	return weatherResponse.Current.Temp_C
+	err = os.WriteFile("weather_cache", body, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isCacheValid(cachefile string) bool {
+	if _, err := os.Stat(cachefile); os.IsNotExist(err) {
+		return false
+	}
+
+	fileinfo, _ := os.Stat(cachefile)
+	return time.Since(fileinfo.ModTime()) < 3*time.Minute
 }
