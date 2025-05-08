@@ -138,5 +138,5 @@ func isCacheValid(cachefile string, city string) bool {
 		return false
 	}
 	fileinfo, _ := os.Stat(cachefile)
-	return time.Since(fileinfo.ModTime()) < 3*time.Minute
+	return time.Since(fileinfo.ModTime()) < 5 * time.Minute
 }
