@@ -18,7 +18,7 @@ type WeatherResponse struct {
 }
 
 type Location struct {
-	Tz_ID   string `json:"tz-id"`
+	Tz_ID   string `json:"tz_id"`
 	Name    string `json:"name"`
 	Country string `json:"country"`
 }
