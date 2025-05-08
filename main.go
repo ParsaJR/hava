@@ -22,7 +22,7 @@ func main() {
 		return
 	} else {
 		apikey := os.Getenv("KEY")
-		temp, err := weatherapi.ReturnTempertureByCity(os.Args[1], apikey)
+		temp, err := weatherapi.ReturnTemperatureByCity(os.Args[1], apikey)
 		if err != nil {
 			log.Fatal(err)
 		}
