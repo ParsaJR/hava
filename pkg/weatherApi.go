@@ -4,17 +4,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
 // The Successfull Response
 type WeatherResponse struct {
-	Current Current `json:"current"`
+	Current  Current  `json:"current"`
+	Location Location `json:"location"`
+}
+
+type Location struct {
+	Tz_ID   string `json:"tz_id"`
+	Name    string `json:"name"`
+	Country string `json:"country"`
 }
 
 type Current struct {
 	Temp_C float64 `json:"temp_c"`
+	Temp_F float64 `json:"temp_f"`
 }
 
 // Error Response From WeatherApi
@@ -26,31 +37,106 @@ type Werror struct {
 	Message string `json:"message"`
 }
 
-func ReturnTempertureByCity(city string, apikey string) float64 {
-	temperture := call(city, apikey)
-	return temperture
+type CachedWeatherData struct {
+	RequestedCity string          `json:"requested_city"`
+	Weather       WeatherResponse `json:"weather"`
 }
 
-func call(city string, apikey string) float64{
-	
+func ReturnTemperatureByCity(city string, apikey string) (float64, error) {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		cacheDir, err = os.Executable()
+		if err != nil {
+			return 0, fmt.Errorf("Cannot determine the executable path: %w", err)
+		}
+	}
+	cacheFile := filepath.Join(cacheDir, "weather_cache")
+
+	if !isCacheValid(cacheFile, city) {
+		err = dump(city, apikey, cacheFile)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	file, err := os.ReadFile(cacheFile)
+	if err != nil {
+		return 0, err
+	}
+
+	var cachedData CachedWeatherData
+	err = json.Unmarshal(file, &cachedData)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to unmarshal weather data: %w", err)
+	}
+	return cachedData.Weather.Current.Temp_C, nil
+
+}
+
+func dump(city string, apikey string, cachefile string) error {
+
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=no", apikey, city)
 
-	resp, err := http.Get(url)
+	response, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		var weatherResponseError WeatherResponseError
-		err = json.Unmarshal(body, &weatherResponseError)
-		log.Fatal("Error: ", weatherResponseError.Error.Message)
+	if response.StatusCode != http.StatusOK {
+		// trying to parse the error
+		var apierror WeatherResponseError
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read the response: %w", err)
+		}
+		if err = json.Unmarshal(body, &apierror); err != nil {
+			return fmt.Errorf("Failed to parse Api response: %w", err)
+		}
+		return fmt.Errorf("Api Error: %s", apierror.Error.Message)
 	}
 
-	var weatherResponse WeatherResponse
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
 
-	err = json.Unmarshal(body, &weatherResponse)
-	return weatherResponse.Current.Temp_C
+	var weather WeatherResponse
+	if err = json.Unmarshal(body, &weather); err != nil {
+		return fmt.Errorf("failed to unmarshal weather data: %w", err)
+	}
+	cache := CachedWeatherData{
+		RequestedCity: city,
+		Weather:       weather,
+	}
+	data, err := json.Marshal(cache)
+	err = os.WriteFile(cachefile, data, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isCacheValid(cachefile string, city string) bool {
+	if _, err := os.Stat(cachefile); os.IsNotExist(err) {
+		return false
+	}
+
+	cache, err := os.ReadFile(cachefile)
+	if err != nil {
+		return false
+	}
+
+	var data CachedWeatherData
+	if err = json.Unmarshal(cache, &data); err != nil {
+		return false
+	}
+
+	if strings.ToLower(data.RequestedCity) != strings.ToLower(city) {
+		return false
+	}
+	fileinfo, _ := os.Stat(cachefile)
+	return time.Since(fileinfo.ModTime()) < 5 * time.Minute
 }

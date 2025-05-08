@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// This will test the general api compability with the app. like if the response can be Unmarshaled using the expected struct or not.
 func TestApi(t *testing.T) {
 	err := godotenv.Load("../.env")
 	apikey := os.Getenv("KEY")
